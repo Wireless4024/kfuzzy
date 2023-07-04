@@ -1,5 +1,7 @@
 package com.github.wireless4024.kfuzzy.util
 
+import com.github.wireless4024.kfuzzy.field.OmittedField
+
 
 class Expander(list: Map<String, List<Any?>>) : Iterator<Map<String, Any?>> {
     private val pairs: List<Pair<String, List<Any?>>>
@@ -19,7 +21,8 @@ class Expander(list: Map<String, List<Any?>>) : Iterator<Map<String, Any?>> {
     override fun next(): Map<String, Any?> {
         val obj = mutableMapOf<String, Any?>()
         for ((idx, value) in index.withIndex()) {
-            val v = pairs[idx].second.getOrNull(value) ?: continue
+            val v = pairs[idx].second.getOrNull(value)
+            if (v == OmittedField) continue
             obj[pairs[idx].first] = v
         }
         advanceIndex()

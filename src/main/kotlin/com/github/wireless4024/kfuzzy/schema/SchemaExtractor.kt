@@ -1,9 +1,6 @@
 package com.github.wireless4024.kfuzzy.schema
 
-import com.github.wireless4024.kfuzzy.annotation.Blank
-import com.github.wireless4024.kfuzzy.annotation.EnumString
-import com.github.wireless4024.kfuzzy.annotation.NotBlank
-import com.github.wireless4024.kfuzzy.annotation.RangeInteger
+import com.github.wireless4024.kfuzzy.annotation.*
 import com.github.wireless4024.kfuzzy.field.*
 import com.github.wireless4024.kfuzzy.generator.*
 import com.github.wireless4024.kfuzzy.reflection.RClass
@@ -11,22 +8,35 @@ import com.github.wireless4024.kfuzzy.reflection.RField
 import kotlin.reflect.full.isSubclassOf
 
 object SchemaExtractor {
-    fun extractAnnotation(nullable: Boolean, annotations: List<Annotation>): MutableList<Generator> {
+    fun extractAnnotation(
+        nullable: Boolean,
+        optional: Boolean? = null,
+        annotations: List<Annotation>
+    ): MutableList<Generator> {
         val generators = mutableListOf<Generator>()
+        var omitField: Boolean? = optional
+        var generateNotNull = false
         for (annotation in annotations) {
             when (annotation) {
                 is Blank -> generators += BlankGenerator
                 is NotBlank -> generators += if (nullable) NotBlankOrNullGenerator else NotBlankGenerator
                 is EnumString -> generators += EnumStringGenerator(annotation.value)
+                is OmitField -> {
+                    generateNotNull = true
+                    omitField = annotation.value
+                }
                 // is RangeInteger -> generators += RangeIntegerGenerator(annotation.min, annotation.max)
             }
         }
 
-        if (generators.isEmpty() && !nullable) {
+        if ((generators.isEmpty() || generateNotNull) && !nullable) {
             generators += NotNullGenerator
         } else if (nullable) {
             generators += NullableGenerator
         }
+
+        if (omitField != false)
+            generators += OmitFieldGenerator
 
         return generators
     }
@@ -56,13 +66,13 @@ object SchemaExtractor {
             ) to extractAnnotation(rField.nullable, rField.annotations)*/
 
             inner.isSubclassOf(Enum::class) -> {
-                val generators = extractAnnotation(rField.nullable, rField.annotations)
+                val generators = extractAnnotation(rField.nullable, rField.optional, rField.annotations)
                 generators.removeIf { it is NotNullGenerator }
                 generators += EnumStringGenerator(type.enumValues!!.map { it.toString() }.toTypedArray())
                 FieldString to generators
             }
 
-            else -> kindOf(type, rField) to extractAnnotation(rField.nullable, rField.annotations)
+            else -> kindOf(type, rField) to extractAnnotation(rField.nullable, rField.optional, rField.annotations)
         }
     }
 
@@ -82,9 +92,15 @@ object SchemaExtractor {
 
                         rClass.inner.isSubclassOf(Collection::class) -> {
                             val inner = rClass.generics.values.first()
+                            val emitEmpty = parent?.annotations?.find { it is NotBlank }
                             FieldList(
                                 kindOf(inner, null),
-                                extractAnnotation(parent?.nullable == true || inner.nullable, inner.annotations)
+                                emitEmpty != null,
+                                extractAnnotation(
+                                    parent?.nullable == true || inner.nullable,
+                                    parent?.optional,
+                                    inner.annotations
+                                )
                             )
                         }
 

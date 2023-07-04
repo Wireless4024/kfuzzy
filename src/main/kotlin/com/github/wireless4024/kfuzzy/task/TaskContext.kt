@@ -72,8 +72,18 @@ class TaskContext : AutoCloseable {
         }
     }
 
-    infix fun String.with(value: Any) {
-        storage[this] = value
+    infix fun Any.asState(key: String) {
+        storage[key] = this
+    }
+
+    infix fun <T : Any> T.asState(key: KClass<T>) {
+        storage[key] = this
+    }
+
+    @Synchronized
+    fun <T> getOrDefault(key: String, default: (key: Any) -> T): MutableSet<T> {
+        storage.computeIfAbsent(key, default)
+        return get(key)
     }
 
     fun <T> set(key: String, value: T) {
@@ -84,12 +94,20 @@ class TaskContext : AutoCloseable {
         storage[key] = value
     }
 
-    fun <T> get(key: String): T {
+    operator fun String.unaryPlus(): Any {
+        return get(this)
+    }
+
+    operator fun <T : Any> KClass<T>.unaryPlus(): T {
+        return get(this)
+    }
+
+    private fun <T> get(key: String): T {
         @Suppress("UNCHECKED_CAST")
         return storage[key] as T
     }
 
-    fun <T : Any> get(key: KClass<T>): T {
+    private fun <T : Any> get(key: KClass<T>): T {
         @Suppress("UNCHECKED_CAST")
         return storage[key] as T
     }

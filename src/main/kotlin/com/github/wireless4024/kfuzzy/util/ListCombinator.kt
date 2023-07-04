@@ -1,31 +1,42 @@
 package com.github.wireless4024.kfuzzy.util
 
-import kotlin.random.Random
-
 object ListCombinator {
-    fun generateList(list: List<List<Any?>>, expand: Boolean = false): List<List<Any?>> {
-        if (list.size == 1) return list
-        val random = Random(1234567890)
-        val indices = list.indices.toMutableList()
+    fun generateList(list: List<List<Any?>>, expand: Boolean = false, emitEmpty: Boolean = false): List<List<Any?>> {
+        if (list.size <= 1) {
+            if (emitEmpty) return listOf(listOf<Any?>()) + list
+        }
 
-        val remainingIndex = indices.toMutableList()
+        return if (expand)
+            powerSet(list, if (emitEmpty) 0 else 1)
+        else
+            generate(list, emitEmpty)
+    }
+
+    private fun generate(list: List<List<Any?>>, emitEmpty: Boolean = false): List<List<Any?>> {
         val output = mutableListOf<List<Any?>>()
+        if (emitEmpty) output += listOf<Any?>()
         output.addAll(list)
-        var last = list.lastIndex
         for (i in 2..list.size) {
-            for (k in 1..last--) {
-                val working = mutableListOf<Any?>()
-                for (j in 1..i) {
-                    val idx = random.nextInt(remainingIndex.size)
-                    val pick = remainingIndex.removeAt(idx)
-                    working += list[pick][0]
-                }
-                output += working
-                remainingIndex.clear()
-                remainingIndex.addAll(indices)
-                if (!expand) break
-            }
+            output.add(list.subList(0, i))
         }
         return output
+    }
+
+    private fun powerSet(list: List<List<Any?>>, start: Int = 0): List<List<Any?>> {
+        val powerSetSize = 1 shl list.size
+        val result = mutableListOf<List<Any?>>()
+
+        for (counter in start until powerSetSize) {
+            val subset = mutableListOf<Any?>()
+
+            for (j in list.indices) {
+                if ((counter and (1 shl j)) > 0)
+                    subset.add(list[j][0])
+            }
+
+            result.add(subset)
+        }
+
+        return result
     }
 }

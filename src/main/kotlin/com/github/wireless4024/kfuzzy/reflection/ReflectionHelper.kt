@@ -6,7 +6,8 @@ import kotlin.reflect.KType
 import kotlin.reflect.KTypeParameter
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.internal.impl.types.KotlinType
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.full.superclasses
 
 object ReflectionHelper {
     /**
@@ -24,17 +25,26 @@ object ReflectionHelper {
     ): RClass<T> {
         val fields = mutableListOf<RField>()
         for (property in klass.memberProperties) {
-            fields += scanField(property, generics)
+            val optional = klass.primaryConstructor
+                ?.parameters
+                ?.ifEmpty {
+                    klass.superclasses.firstOrNull { it.isAbstract || it.isOpen }
+                        ?.primaryConstructor
+                        ?.parameters
+                }
+                ?.find { it.name == property.name }
+                ?.isOptional
+
+            fields += scanField(property, optional == true, generics)
         }
         return RClass(klass, fields, annotations, generics, isFlat = false, nullable = false)
     }
 
 
-    private fun scanField(field: KProperty1<*, *>, generics: Map<String, RClass<*>>): RField {
+    private fun scanField(field: KProperty1<*, *>, optional: Boolean, generics: Map<String, RClass<*>>): RField {
         val name = field.name
         val type = solveType(field.returnType, generics)
         val nullable = field.returnType.isMarkedNullable
-        val optional = false
         val annotations = field.annotations
         return RField(field, name, type, nullable, optional, annotations)
     }

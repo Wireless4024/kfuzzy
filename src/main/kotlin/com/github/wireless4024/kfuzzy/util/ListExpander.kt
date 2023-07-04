@@ -1,11 +1,14 @@
 package com.github.wireless4024.kfuzzy.util
 
+import com.github.wireless4024.kfuzzy.field.OmittedField
 
-class ListExpander(private val list: List<List<Any?>>) : Iterator<List<Any?>> {
+
+class ListExpander(list: List<List<Any?>>) : Iterator<List<Any?>> {
+    private val list = list.filter { it.firstOrNull() != OmittedField }
     private val index = mutableListOf<Int>()
 
     init {
-        for (ignored in list.indices) {
+        for (ignored in this.list.indices) {
             index.add(0)
         }
     }

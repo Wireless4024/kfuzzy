@@ -6,7 +6,7 @@ import com.github.wireless4024.kfuzzy.field.FieldString
 
 object NotBlankOrNullGenerator : Generator {
     override fun successCase(kind: FieldKind, faker: IFaker) = kind.randomValue(faker)
-    override fun possibleSuccessCase(kind: FieldKind, faker: IFaker) = listOf(null, kind.randomValue(faker))
+    override fun possibleSuccessCase(kind: FieldKind, faker: IFaker) = listOf(null) + kind.possibleSuccessValues(faker)
     override fun possibleFailCase(kind: FieldKind, faker: IFaker) =
         if (kind is FieldString)
             listOf("") + kind.possibleFailValues(faker)
