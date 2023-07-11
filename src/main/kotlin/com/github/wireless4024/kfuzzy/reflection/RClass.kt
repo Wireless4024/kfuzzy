@@ -1,7 +1,7 @@
 package com.github.wireless4024.kfuzzy.reflection
 
 import com.github.wireless4024.kfuzzy.util.DeepToString
-import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.toString
+import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.classToDeepString
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.cast
@@ -86,25 +86,37 @@ class RClass<T : Any>(
         }
     }
 
-    override fun toString(): String {
-        return toString(0)
+    private fun castNumber(number: Double, klass: RClass<*>): Number {
+        return when (klass.inner) {
+            Byte::class -> number.toInt().toByte()
+            Short::class -> number.toInt().toShort()
+            Int::class -> number.toInt()
+            Float::class -> number.toFloat()
+            Double::class -> number.toDouble()
+            else -> number
+        }
     }
 
     fun withNullable(nullable: Boolean): RClass<T> {
         return RClass(inner, fields, annotations, generics, isFlat, nullable)
     }
 
-    override fun toString(deep: Int): String {
-        val parentIndent = "  ".repeat(deep)
-        val indent = "  ".repeat(deep + 1)
-        return "RClass(\n" +
-                "${indent}inner=$inner,\n" +
-                "${indent}fields=${fields.toString(deep + 1)},\n" +
-                "${indent}annotations=${annotations},\n" +
-                "${indent}generics=${generics.toString(deep + 1)},\n" +
-                "${indent}nullable=${nullable}\n" +
-                "${parentIndent})"
+    override fun toString(deep: Int): StringBuilder {
+        return classToDeepString(deep) {
+            name("RClass")
+                .field("inner", inner)
+                .field("isFlat", isFlat)
+                .field("fields", fields)
+                .field("annotations", annotations)
+                .field("generics", generics)
+                .field("nullable", nullable)
+        }
     }
+
+    override fun toString(): String {
+        return "RClass(inner=$inner, fields=$fields, annotations=$annotations, generics=$generics, isFlat=$isFlat, nullable=$nullable)"
+    }
+
 
     companion object {
         /**

@@ -2,14 +2,16 @@ package com.github.wireless4024.kfuzzy.task
 
 import com.github.wireless4024.kfuzzy.schema.Schema
 import com.github.wireless4024.kfuzzy.util.DeepToString
+import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.classToDeepString
+import com.github.wireless4024.kfuzzy.wrapper.DynamicObject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
 
 class FuzzyTask<T>(
     private val schema: Schema,
-    private val mapper: (Map<String, Any?>) -> T,
+    private val mapper: DynamicObject.() -> T,
     init: () -> Unit = {},
-    private val runner: suspend TaskContext.(T) -> Unit
+    private val runner: suspend CurrentContext.(T) -> Unit
 ) : ExecutableTask, DeepToString {
     private val nextList = mutableListOf<ExecutableTask>()
     private val transformers = mutableListOf<(T) -> T>({ it })
@@ -49,15 +51,19 @@ class FuzzyTask<T>(
 
         for (transformer in transformers) {
             for (it in schema.possibleSuccessCase(ctx.faker)) {
+                val currentContext = ctx.newContext()
                 val value = mapper(it)
+                currentContext.body = value
                 if (failOn(value))
-                    ctx.spawnFailure(owner, transformer(value), runner)
+                    ctx.spawnFailure(currentContext, runner)
                 else
-                    tasks += ctx.spawnSuccess(owner, transformer(value), runner)
+                    tasks += ctx.spawnSuccess(currentContext, runner)
             }
 
             for (it in schema.possibleFailCase(ctx.faker)) {
-                ctx.spawnFailure(owner, transformer(mapper(it)), runner)
+                val currentContext = ctx.newContext()
+                currentContext.body = transformer(mapper(it))
+                ctx.spawnFailure(currentContext, runner)
             }
         }
         tasks.joinAll()
@@ -65,15 +71,12 @@ class FuzzyTask<T>(
         return TaskResult(nextList, listOf())
     }
 
-    override fun toString(): String {
-        return toString(0)
-    }
 
-    override fun toString(deep: Int): String {
-        val parentIndent = "  ".repeat(deep)
-        val indent = "  ".repeat(deep + 1)
-        return "FuzzyTask(\n" +
-                "${indent}schema=${schema.toString(deep + 1)}\n" +
-                "${parentIndent})"
+    override fun toString(deep: Int) = classToDeepString(deep) {
+        name("FuzzyTask")
+            .field("schema", schema)
+    }
+    override fun toString(): String {
+        return "FuzzyTask(schema=$schema)"
     }
 }

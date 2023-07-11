@@ -1,6 +1,7 @@
 package com.github.wireless4024.kfuzzy.reflection
 
 import com.github.wireless4024.kfuzzy.util.DeepToString
+import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.classToDeepString
 import kotlin.reflect.KProperty1
 
 
@@ -22,20 +23,17 @@ class RField(
     val optional: Boolean,
     val annotations: List<Annotation>
 ) : DeepToString {
-    override fun toString(): String {
-        return toString(0)
+    override fun toString(deep: Int) = classToDeepString(deep) {
+        name("RField")
+            .field("inner", inner)
+            .field("name", name)
+            .field("type", type)
+            .field("nullable", nullable)
+            .field("optional", optional)
+            .field("annotations", annotations)
     }
 
-    override fun toString(deep: Int): String {
-        val parentIndent = "  ".repeat(deep)
-        val indent = "  ".repeat(deep + 1)
-        return "RField(\n" +
-                "${indent}inner=$inner,\n" +
-                "${indent}name=$name,\n" +
-                "${indent}type=${type.toString(deep + 1)},\n" +
-                "${indent}nullable=$nullable,\n" +
-                "${indent}optional=$optional,\n" +
-                "${indent}annotations=$annotations\n" +
-                "${parentIndent})"
+    override fun toString(): String {
+        return "RField(inner=$inner, name='$name', type=$type, nullable=$nullable, optional=$optional, annotations=$annotations)"
     }
 }

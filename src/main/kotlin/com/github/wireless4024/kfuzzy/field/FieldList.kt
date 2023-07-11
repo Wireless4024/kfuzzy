@@ -2,7 +2,7 @@ package com.github.wireless4024.kfuzzy.field
 
 import com.github.wireless4024.kfuzzy.faker.IFaker
 import com.github.wireless4024.kfuzzy.generator.Generator
-import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.toDeepString
+import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.classToDeepString
 import com.github.wireless4024.kfuzzy.util.ListCombinator
 import com.github.wireless4024.kfuzzy.util.ListExpander
 
@@ -17,7 +17,7 @@ data class FieldList(val kind: FieldKind, val emitEmpty: Boolean = false, val ge
             .filter { it.firstOrNull() != OmittedField }
             .toMutableList()
 
-        return ListCombinator.generateList(possibleList, emitEmpty = emitEmpty)
+        return ListCombinator.generateList(possibleList, emitEmpty = !emitEmpty)
     }
 
     override fun possibleFailValues(faker: IFaker): List<Any?> {
@@ -29,13 +29,10 @@ data class FieldList(val kind: FieldKind, val emitEmpty: Boolean = false, val ge
         return ListCombinator.generateList(failList, true, emitEmpty)
     }
 
-    override fun toString(deep: Int): String {
-        val parentIndent = "  ".repeat(deep)
-        val indent = "  ".repeat(deep + 1)
-        return "FieldList(\n" +
-                "${indent}kind=${kind.toString(deep + 1)},\n" +
-                "${indent}emitEmpty=${emitEmpty},\n" +
-                "${indent}generators=${generators.toDeepString(deep + 1)}\n" +
-                "${parentIndent})"
+    override fun toString(deep: Int) = classToDeepString(deep) {
+        name("FieldList")
+            .field("kind", kind)
+            .field("emitEmpty", emitEmpty)
+            .field("generators", generators)
     }
 }

@@ -5,7 +5,6 @@ import com.github.wireless4024.kfuzzy.faker.IFaker
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
 
 class TaskContext : AutoCloseable {
@@ -24,46 +23,39 @@ class TaskContext : AutoCloseable {
         return scope.launch(Dispatchers.IO) { block(this@TaskContext) }
     }
 
-    fun <T> spawnSuccess(owner: ExecutableTask, value: T, block: suspend TaskContext.(T) -> Unit): Job {
-        return scope.launch {
+    private fun panic(cause: String) {
+        //scope.cancel(cause)
+    }
+
+    fun <T> spawnSuccess(ctx: CurrentContext, block: suspend CurrentContext.(T) -> Unit): Deferred<CurrentContext> {
+        return scope.async {
             try {
-                block(this@TaskContext, value)
+                @Suppress("UNCHECKED_CAST") val value = ctx.body as T
+                block(ctx, value)
                 taskStats.success.getAndIncrement()
             } catch (e: Throwable) {
-                scope.cancel("Error")
-                e.printStackTrace()
-                taskStats.failure += FailedTask(owner, e, value)
+                taskStats.failure += FailedTask(ctx, e)
+                ctx.fail(e)
             }
+            ctx
         }
     }
 
-    fun <T> spawnFailure(owner: ExecutableTask, value: T, block: suspend TaskContext.(T) -> Unit): Job {
-        return scope.launch {
+    fun <T> spawnFailure(ctx: CurrentContext, block: suspend CurrentContext.(T) -> Unit): Deferred<CurrentContext> {
+        return scope.async {
             try {
-                block(this@TaskContext, value)
-                taskStats.failure += FailedTask(owner, null, value)
-                scope.cancel("Error")
+                @Suppress("UNCHECKED_CAST") val value = ctx.body as T
+                block(ctx, value)
+                taskStats.failure += FailedTask(ctx, null)
+                ctx.fail(IllegalStateException("Task with payload $value should not success"))
             } catch (e: Throwable) {
                 taskStats.success.getAndIncrement()
             }
+            ctx
         }
     }
 
-    fun <T> successBlocking(owner: ExecutableTask, value: T, block: suspend TaskContext.(T) -> Unit): Job {
-        return spawnSuccess(owner, value) {
-            withContext(Dispatchers.IO) {
-                block(this@TaskContext, value)
-            }
-        }
-    }
-
-    fun <T> failBlocking(owner: ExecutableTask, value: T, block: suspend TaskContext.(T) -> Unit): Job {
-        return spawnFailure(owner, value) {
-            withContext(Dispatchers.IO) {
-                block(this@TaskContext, value)
-            }
-        }
-    }
+    fun newContext() = CurrentContext(this)
 
     suspend fun run(task: ExecutableTask) {
         TaskScheduler(this, scope).apply {
@@ -72,42 +64,26 @@ class TaskContext : AutoCloseable {
         }
     }
 
-    infix fun Any.asState(key: String) {
-        storage[key] = this
-    }
-
-    infix fun <T : Any> T.asState(key: KClass<T>) {
-        storage[key] = this
-    }
-
     @Synchronized
     fun <T> getOrDefault(key: String, default: (key: Any) -> T): MutableSet<T> {
         storage.computeIfAbsent(key, default)
         return get(key)
     }
 
-    fun <T> set(key: String, value: T) {
+    internal fun <T> set(key: String, value: T) {
         storage[key] = value
     }
 
-    fun <T : Any> set(key: KClass<T>, value: T) {
+    internal fun <T : Any> set(key: KClass<T>, value: T) {
         storage[key] = value
     }
 
-    operator fun String.unaryPlus(): Any {
-        return get(this)
-    }
-
-    operator fun <T : Any> KClass<T>.unaryPlus(): T {
-        return get(this)
-    }
-
-    private fun <T> get(key: String): T {
+    internal fun <T> get(key: String): T {
         @Suppress("UNCHECKED_CAST")
         return storage[key] as T
     }
 
-    private fun <T : Any> get(key: KClass<T>): T {
+    internal fun <T : Any> get(key: KClass<T>): T {
         @Suppress("UNCHECKED_CAST")
         return storage[key] as T
     }
@@ -116,8 +92,5 @@ class TaskContext : AutoCloseable {
         return "TaskContext(storage=$storage, taskStats=$taskStats, faker=$faker)"
     }
 
-    override fun close() {
-        executor.shutdown()
-        executor.awaitTermination(5, TimeUnit.MINUTES)
-    }
+    override fun close() {}
 }

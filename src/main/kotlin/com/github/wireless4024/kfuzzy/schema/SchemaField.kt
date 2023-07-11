@@ -4,7 +4,7 @@ import com.github.wireless4024.kfuzzy.faker.IFaker
 import com.github.wireless4024.kfuzzy.field.FieldKind
 import com.github.wireless4024.kfuzzy.generator.Generator
 import com.github.wireless4024.kfuzzy.util.DeepToString
-import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.toDeepString
+import com.github.wireless4024.kfuzzy.util.DeepToString.Companion.classToDeepString
 
 /**
  * Represents a schema field.
@@ -25,16 +25,13 @@ data class SchemaField(val kind: FieldKind, val generators: List<Generator>) : D
         return generators.flatMap { it.possibleFailCase(kind, faker) }
     }
 
-    override fun toString(): String {
-        return toString(0)
+    override fun toString(deep: Int) = classToDeepString(deep) {
+        name("SchemaField")
+            .field("kind", kind)
+            .field("generators", generators)
     }
 
-    override fun toString(deep: Int): String {
-        val parentIndent = "  ".repeat(deep)
-        val indent = "  ".repeat(deep + 1)
-        return "SchemaField(\n" +
-                "${indent}kind=${kind.toString(deep + 1)},\n" +
-                "${indent}generators=${generators.toDeepString(deep + 1)}\n" +
-                "${parentIndent})"
+    override fun toString(): String {
+        return "SchemaField(kind=$kind, generators=$generators)"
     }
 }

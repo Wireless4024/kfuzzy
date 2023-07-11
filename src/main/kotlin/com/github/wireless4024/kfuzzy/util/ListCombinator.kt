@@ -3,7 +3,10 @@ package com.github.wireless4024.kfuzzy.util
 object ListCombinator {
     fun generateList(list: List<List<Any?>>, expand: Boolean = false, emitEmpty: Boolean = false): List<List<Any?>> {
         if (list.size <= 1) {
-            if (emitEmpty) return listOf(listOf<Any?>()) + list
+            return if (emitEmpty)
+                listOf(listOf<Any?>()) + list
+            else
+                list
         }
 
         return if (expand)
@@ -17,7 +20,7 @@ object ListCombinator {
         if (emitEmpty) output += listOf<Any?>()
         output.addAll(list)
         for (i in 2..list.size) {
-            output.add(list.subList(0, i))
+            output.add(list.subList(0, i).map { it[0] })
         }
         return output
     }

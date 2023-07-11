@@ -19,7 +19,7 @@ object SchemaExtractor {
         for (annotation in annotations) {
             when (annotation) {
                 is Blank -> generators += BlankGenerator
-                is NotBlank -> generators += if (nullable) NotBlankOrNullGenerator else NotBlankGenerator
+                is NotBlank -> generators += NotBlankGenerator
                 is EnumString -> generators += EnumStringGenerator(annotation.value)
                 is OmitField -> {
                     generateNotNull = true
@@ -58,22 +58,7 @@ object SchemaExtractor {
 
     private fun kindOf(rField: RField): Pair<FieldKind, List<Generator>> {
         val type = rField.type
-        val inner = type.inner
-        return when {
-            /*inner.isSubclassOf(Collection::class) -> FieldList(
-                kindOf(rField.type.generics.values.first(), rField),
-                generators
-            ) to extractAnnotation(rField.nullable, rField.annotations)*/
-
-            inner.isSubclassOf(Enum::class) -> {
-                val generators = extractAnnotation(rField.nullable, rField.optional, rField.annotations)
-                generators.removeIf { it is NotNullGenerator }
-                generators += EnumStringGenerator(type.enumValues!!.map { it.toString() }.toTypedArray())
-                FieldString to generators
-            }
-
-            else -> kindOf(type, rField) to extractAnnotation(rField.nullable, rField.optional, rField.annotations)
-        }
+        return kindOf(type, rField) to extractAnnotation(rField.nullable, rField.optional, rField.annotations)
     }
 
     private fun kindOf(rClass: RClass<*>, parent: RField?): FieldKind {
@@ -97,11 +82,15 @@ object SchemaExtractor {
                                 kindOf(inner, null),
                                 emitEmpty != null,
                                 extractAnnotation(
-                                    parent?.nullable == true || inner.nullable,
-                                    parent?.optional,
+                                    inner.nullable,
+                                    false,
                                     inner.annotations
                                 )
                             )
+                        }
+
+                        rClass.inner.isSubclassOf(Enum::class) -> {
+                            FieldEnumString(rClass.enumValues!!.map(Any::toString).toTypedArray())
                         }
 
                         else -> throw UnsupportedOperationException()
