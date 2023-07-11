@@ -16,6 +16,8 @@ dependencies {
     implementation(kotlin("reflect"))
     implementation("io.ktor:ktor-client-core:$ktor_version")
     implementation("io.ktor:ktor-client-cio:$ktor_version")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    implementation("io.ktor:ktor-serialization-jackson:$ktor_version")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2")
     testImplementation(kotlin("test"))
 }
