@@ -64,6 +64,9 @@ class RestTask<R>(
             else -> throw UnsupportedOperationException("Unsupported http method $method")
         }
 
+        // skip checking if return type is Unit
+        if (responseType.type == Unit::class) return
+
         val responseBody = response.body<R>(responseType)
         verify(context, responseBody)
     }
