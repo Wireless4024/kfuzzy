@@ -11,6 +11,7 @@ repositories {
 }
 
 val ktor_version: String by project
+val khtml_version: String by project
 
 dependencies {
     implementation(kotlin("reflect"))
@@ -18,6 +19,8 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:$ktor_version")
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("io.ktor:ktor-serialization-jackson:$ktor_version")
+    implementation("org.jetbrains.kotlinx:kotlinx-html:$khtml_version")
+    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:$khtml_version")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2")
     testImplementation(kotlin("test"))
 }
